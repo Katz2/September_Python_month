@@ -1,0 +1,10 @@
+Pandas:
+Pandas is an open source python library used for data manipulation and analysis It provides tools which allow us to analysis data
+
+Key features: Efficient for data analysis Easy to use for data cleaning and preparation It workds well with Numpy, MatplotLib and other python libraries Helps handle missing data Supports series and data frame
+
+Steps required: !pip install pandas
+
+you need to download a library to be able to use it in your notebook if is not pre-installed
+
+EDA Processess
