@@ -1,0 +1,814 @@
+{
+  "datasets": [
+    {
+      "name": "7c70a731",
+      "displayName": "Revenue and Orders Summary Dataset",
+      "queryLines": [
+        "SELECT\n",
+        "  to_date(MonthStart) AS month,\n",
+        "  SUM(CountedRevenue) AS revenue,\n",
+        "  COUNT(DISTINCT CASE WHEN CountsAsRevenue = 'Yes' THEN OrderID END) AS orders,\n",
+        "  SUM(CountedRevenue) / COUNT(DISTINCT CASE WHEN CountsAsRevenue = 'Yes' THEN OrderID END) AS avg_order_value,\n",
+        "  CASE WHEN to_date(MonthStart) >= DATE'2026-02-01' THEN 'From Feb 2026' ELSE 'Before Feb 2026' END AS phase\n",
+        "FROM workspace.default.shop_joined\n",
+        "WHERE MonthStart IS NOT NULL\n",
+        "GROUP BY 1, 5\n",
+        "ORDER BY month\n",
+        "\n"
+      ]
+    },
+    {
+      "name": "1afa8f12",
+      "displayName": "Customer Segment Average Revenue Per User Metrics",
+      "queryLines": [
+        "SELECT CustomerSegment,\n",
+        "       SUM(CountedRevenue) / COUNT(DISTINCT CustomerID) AS revenue_per_customer\n",
+        "FROM workspace.default.shop_joined\n",
+        "WHERE CountsAsRevenue = 'Yes' AND CustomerSegment <> 'Unknown'\n",
+        "GROUP BY CustomerSegment"
+      ]
+    },
+    {
+      "name": "7fc89a73",
+      "displayName": "Order Status Distribution and Percentage Summary",
+      "queryLines": [
+        "SELECT Status, ROUND(100 * COUNT(*) / SUM(COUNT(*)) OVER (), 1) AS pct_of_orders\n",
+        "FROM workspace.default.shop_joined\n",
+        "GROUP BY Status"
+      ]
+    },
+    {
+      "name": "f6691125",
+      "displayName": "Payment Method Failure Rates Analysis",
+      "queryLines": [
+        "SELECT PaymentMethod,\n",
+        "       ROUND(100 * AVG(CASE WHEN PaymentStatus = 'Failed' THEN 1 ELSE 0 END), 1) AS failed_pct\n",
+        "FROM workspace.default.shop_joined\n",
+        "WHERE PaymentMethod <> 'Unknown'\n",
+        "GROUP BY PaymentMethod\n",
+        "ORDER BY failed_pct DESC"
+      ]
+    },
+    {
+      "name": "8ff8a268",
+      "displayName": "Discount Analysis Metrics for Revenue Tracking",
+      "queryLines": [
+        "SELECT CONCAT(CAST(ROUND(Discount * 100) AS INT), '%') AS discount_label,\n",
+        "       Discount,\n",
+        "       AVG(CountedRevenue) AS avg_order_value,\n",
+        "       AVG(Quantity) AS avg_units\n",
+        "FROM workspace.default.shop_joined\n",
+        "WHERE CountsAsRevenue = 'Yes'\n",
+        "GROUP BY Discount\n",
+        "ORDER BY Discount"
+      ]
+    },
+    {
+      "name": "3768e4ad",
+      "displayName": "KPIs",
+      "queryLines": [
+        "SELECT\n",
+        "  SUM(CountedRevenue) AS total_revenue,\n",
+        "  COUNT(DISTINCT CASE WHEN CountsAsRevenue = 'Yes' THEN OrderID END) AS orders,\n",
+        "  SUM(CountedRevenue) / COUNT(DISTINCT CASE WHEN CountsAsRevenue = 'Yes' THEN OrderID END) AS avg_order_value\n",
+        "FROM workspace.default.shop_joined"
+      ]
+    },
+    {
+      "name": "7069fa1d",
+      "displayName": "Cities",
+      "queryLines": [
+        "SELECT City, SUM(CountedRevenue) AS revenue\n",
+        "FROM workspace.default.shop_joined\n",
+        "WHERE City <> 'Unknown'\n",
+        "GROUP BY City\n",
+        "ORDER BY revenue DESC"
+      ]
+    },
+    {
+      "name": "33b8b6e6",
+      "displayName": "Segments",
+      "queryLines": [
+        "SELECT CustomerSegment,\n",
+        "       SUM(CountedRevenue) / COUNT(DISTINCT CustomerID) AS revenue_per_customer\n",
+        "FROM workspace.default.shop_joined\n",
+        "WHERE CountsAsRevenue = 'Yes' AND CustomerSegment <> 'Unknown'\n",
+        "GROUP BY CustomerSegment"
+      ]
+    },
+    {
+      "name": "f8be2ef1",
+      "displayName": "Products dataset",
+      "queryLines": [
+        "WITH p AS (\n",
+        "  SELECT\n",
+        "    ProductName,\n",
+        "    SUM(CountedRevenue) AS revenue,\n",
+        "    SUM(CASE WHEN CountsAsRevenue = 'Yes' THEN Quantity ELSE 0 END) AS units\n",
+        "  FROM workspace.default.shop_joined\n",
+        "  GROUP BY ProductName\n",
+        ")\n",
+        "SELECT\n",
+        "  ProductName,\n",
+        "  revenue,\n",
+        "  units,\n",
+        "  CONCAT(LPAD(CAST(RANK() OVER (ORDER BY revenue DESC) AS STRING), 2, '0'), '. ', ProductName) AS revenue_label,\n",
+        "  CONCAT(LPAD(CAST(RANK() OVER (ORDER BY units DESC) AS STRING), 2, '0'), '. ', ProductName) AS units_label\n",
+        "FROM p\n",
+        "ORDER BY revenue DESC"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "e89273ac",
+      "displayName": "Graphs",
+      "layout": [
+        {
+          "widget": {
+            "name": "3984436c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "7c70a731",
+                  "fields": [
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "revenue",
+                      "expression": "`revenue`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "# Revenue Over Time",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  }
+                ]
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month",
+                  "displayName": "Month",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "revenue",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "6a03b5b1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "7c70a731",
+                  "fields": [
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "avg_order_value",
+                      "expression": "`avg_order_value`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "# Orders over Time",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  }
+                ],
+                "lineShape": "linear"
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month",
+                  "displayName": "Month",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "avg_order_value",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 12,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "total-revenue",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "3768e4ad",
+                  "fields": [
+                    {
+                      "name": "sum(total_revenue)",
+                      "expression": "SUM(`total_revenue`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "# Total Revenue",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_revenue)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "average-order",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "3768e4ad",
+                  "fields": [
+                    {
+                      "name": "sum(avg_order_value)",
+                      "expression": "SUM(`avg_order_value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "# Average Order",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(avg_order_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "total-number-of-orders",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "3768e4ad",
+                  "fields": [
+                    {
+                      "name": "sum(orders)",
+                      "expression": "SUM(`orders`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "# Total Number of Orders",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(orders)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "revenue-per-city",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "7069fa1d",
+                  "fields": [
+                    {
+                      "name": "City",
+                      "expression": "`City`"
+                    },
+                    {
+                      "name": "sum(revenue)",
+                      "expression": "SUM(`revenue`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Revenue Per City",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "City",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(revenue)",
+                  "displayName": "Revenue",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "revenue-per-customer-segment",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "33b8b6e6",
+                  "fields": [
+                    {
+                      "name": "CustomerSegment",
+                      "expression": "`CustomerSegment`"
+                    },
+                    {
+                      "name": "sum(revenue_per_customer)",
+                      "expression": "SUM(`revenue_per_customer`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Revenue Per Customer Segment",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "CustomerSegment",
+                  "displayName": "Customer_Segment",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(revenue_per_customer)",
+                  "displayName": "Revenue Per Customer",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 18,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "revenue-per-product-1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f8be2ef1",
+                  "fields": [
+                    {
+                      "name": "ProductName",
+                      "expression": "`ProductName`"
+                    },
+                    {
+                      "name": "revenue",
+                      "expression": "`revenue`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "# Revenue Per Product",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  }
+                ],
+                "layout": "stack"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "ProductName",
+                  "displayName": "Product ",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "Backpack",
+                        "Bluetooth Speaker",
+                        "Desk Lamp",
+                        "Fitness Band",
+                        "Gaming Controller",
+                        "HDMI Cable",
+                        "Headphones",
+                        "Laptop Stand",
+                        "Mechanical Keyboard",
+                        "Microphone",
+                        "Monitor",
+                        "Notebook",
+                        "Office Chair",
+                        "Phone Case",
+                        "Power Bank",
+                        "Smart Watch",
+                        "Tablet",
+                        "USB-C Cable",
+                        "Webcam",
+                        "Wireless Mouse"
+                      ]
+                    }
+                  }
+                },
+                "y": {
+                  "primary": {
+                    "fields": [
+                      {
+                        "fieldName": "revenue",
+                        "displayName": "Revenue"
+                      }
+                    ],
+                    "scale": {
+                      "type": "quantitative",
+                      "domain": {
+                        "type": "custom"
+                      }
+                    },
+                    "axis": {
+                      "hideTitle": false
+                    },
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
+                  },
+                  "secondary": {
+                    "fields": [],
+                    "scale": {
+                      "type": "quantitative",
+                      "reverse": false
+                    },
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 24,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "ee092b90",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Headphones, Office Chair and Tablet earn the most. Monitor’s price (21) is flagged as possibly incorrect."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 30,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "8ac3314f",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f8be2ef1",
+                  "fields": [
+                    {
+                      "name": "ProductName",
+                      "expression": "`ProductName`"
+                    },
+                    {
+                      "name": "units",
+                      "expression": "`units`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "# Units Sold ",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  }
+                ],
+                "layout": "stack"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "ProductName",
+                  "displayName": "Product ",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "natural-order"
+                    }
+                  }
+                },
+                "y": {
+                  "primary": {
+                    "fields": [
+                      {
+                        "fieldName": "units",
+                        "displayName": "Units Sold"
+                      }
+                    ],
+                    "scale": {
+                      "type": "quantitative",
+                      "domain": {
+                        "type": "custom"
+                      }
+                    },
+                    "axis": {
+                      "hideTitle": false
+                    },
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
+                  },
+                  "secondary": {
+                    "fields": [],
+                    "scale": {
+                      "type": "quantitative",
+                      "reverse": false
+                    },
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 32,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "c472c070",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Cheap items like notebooks and cables sell the most units"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 38,
+            "width": 12,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
